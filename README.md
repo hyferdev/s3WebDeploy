@@ -76,6 +76,21 @@ Deployments are triggered automatically on push to `main` (production) or `stagi
 | `AWS_ACCESS_KEY_ID` | AWS IAM access key |
 | `AWS_SECRET_ACCESS_KEY` | AWS IAM secret key |
 
+### Terraform Cloud Variables
+
+Set these in your Terraform Cloud workspace. Required variables have no default.
+
+| Variable | Type | Sensitive | Required | Description |
+|---|---|---|---|---|
+| `domain_name` | string | no | yes | Primary domain (e.g. `example.com`) |
+| `acm_certificate_arn` | string | no | yes | ARN of ACM certificate in `us-east-1` (required for CloudFront) |
+| `contact_emails` | list(string) | no | yes | Destination addresses for contact form submissions |
+| `contact_token` | string | yes | yes | Generate with "openssl rand -hex 64" |
+| `environment_name` | string | no | no | Deployment environment name (default: `production`) |
+| `aws_region` | string | no | no | AWS region for all resources (default: `us-east-1`) |
+| `domain_aliases` | list(string) | no | no | Additional domain aliases (e.g. `["www.example.com"]`) |
+| `hosted_zone_id` | string | no | no | Route53 hosted zone ID — bypasses name lookup if set |
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).
