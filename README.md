@@ -1,10 +1,10 @@
-# Hyfer — Website
+# Hyfer - Website
 
 Static site deployed serverlessly on AWS via Terraform and GitHub Actions.
 
 ## Stack
 
-- **Frontend**: Static HTML/CSS/JS — no framework
+- **Frontend**: Static HTML/CSS/JS - no framework
 - **CSS**: Tailwind CSS (compiled via CLI)
 - **Icons**: Font Awesome 6 (self-hosted)
 - **Fonts**: Inter variable font (self-hosted)
@@ -89,7 +89,7 @@ Set these in your Terraform Cloud workspace. Required variables have no default.
 | `environment_name` | string | no | no | Deployment environment name (default: `production`) |
 | `aws_region` | string | no | no | AWS region for all resources (default: `us-east-1`) |
 | `domain_aliases` | list(string) | no | no | Additional domain aliases (e.g. `["www.example.com"]`) |
-| `hosted_zone_id` | string | no | no | Route53 hosted zone ID — bypasses name lookup if set |
+| `hosted_zone_id` | string | no | no | Route53 hosted zone ID - optional to bypasses name lookup if set |
 
 ## License
 
