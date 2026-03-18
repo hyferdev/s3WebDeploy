@@ -1,0 +1,112 @@
+name: Deploy Hyfer Site
+run-name: ${{ inputs.action == 'destroy' && 'Destroy' || 'Deploy' }} to ${{ github.ref_name }}
+
+on:
+  push:
+    branches: [main, staging]
+    paths:
+      - 'src/**'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform Action'
+        required: true
+        default: 'apply'
+        type: choice
+        options:
+          - apply
+          - destroy
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  manage-infra:
+    name: "Manage Infrastructure"
+    runs-on: ubuntu-latest
+    env:
+      TF_CLOUD_ORGANIZATION: "your-cloud-organization"
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+      AWS_REGION: "us-east-1"
+      TF_WORKSPACE: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ./terraform
+        run: terraform init
+
+      - name: Terraform Destroy
+        if: ${{ inputs.action == 'destroy' }}
+        working-directory: ./terraform
+        run: terraform destroy -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Apply
+        if: ${{ inputs.action != 'destroy' }}
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Get Outputs
+        if: ${{ inputs.action != 'destroy' }}
+        id: outputs
+        working-directory: ./terraform
+        run: |
+          LAMBDA_URL=$(terraform output -raw lambda_function_url)
+          echo "LAMBDA_URL=$LAMBDA_URL" >> $GITHUB_ENV
+          CONTACT_TOKEN=$(terraform output -raw contact_token)
+          echo "::add-mask::$CONTACT_TOKEN"
+          echo "CONTACT_TOKEN=$CONTACT_TOKEN" >> $GITHUB_ENV
+          BUCKET=$(terraform output -raw s3_bucket)
+          echo "BUCKET=$BUCKET" >> $GITHUB_ENV
+          REGION=$(terraform output -raw region)
+          echo "AWS_REGION=$REGION" >> $GITHUB_ENV
+
+      - name: Inject Config into JS
+        if: ${{ inputs.action != 'destroy' }}
+        run: |
+          sed -i "s|REPLACE_WITH_LAMBDA_URL|$LAMBDA_URL|g" src/landing.js
+          sed -i "s|REPLACE_WITH_CONTACT_TOKEN|$CONTACT_TOKEN|g" src/landing.js
+
+      - name: Setup Node
+        if: ${{ inputs.action != 'destroy' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: build/package-lock.json
+
+      - name: Build Assets
+        if: ${{ inputs.action != 'destroy' }}
+        working-directory: ./build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Configure AWS Credentials
+        if: ${{ inputs.action != 'destroy' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        if: ${{ inputs.action != 'destroy' }}
+        run: |
+          aws s3 sync src/ s3://$BUCKET --delete --acl private
+          echo "Deployed to s3://$BUCKET (env: $TF_WORKSPACE)"
