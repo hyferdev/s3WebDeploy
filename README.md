@@ -17,32 +17,32 @@ Static site deployed serverlessly on AWS via Terraform and GitHub Actions.
 
 ```
 s3WebDeploy/
-├── src/
-│   ├── landing.html        # Main page
-│   ├── landing.js          # Navigation + contact form logic
-│   ├── styles.css          # Custom CSS (on top of Tailwind)
-│   ├── tailwind.css        # Tailwind entry point (compiled to dist/)
-│   ├── vendor-entry.js     # Bundled vendor entry
-│   ├── fonts/
-│   │   ├── inter/          # Self-hosted Inter variable font
-│   │   └── fa/             # Self-hosted Font Awesome 6
-│   ├── images/             # Site images and logos
-│   └── dist/               # Built assets (gitignored, generated in CI)
+├── src/                        # ⚠️ Add your own — not included
+│   ├── landing.html            # Main page
+│   ├── landing.js              # Must contain REPLACE_WITH_LAMBDA_URL
+│   │                           # and REPLACE_WITH_CONTACT_TOKEN placeholders
+│   └── ...                     # Any other static assets
+├── build/                      # ⚠️ Add your own — not included
+│   ├── package.json            # Build dependencies and scripts
+│   ├── tailwind.config.js      # Tailwind configuration
+│   └── ...
 ├── terraform/
 │   ├── main.tf
 │   ├── variables.tf
 │   ├── outputs.tf
 │   └── modules/
-│       ├── storage/        # S3 bucket (private, OAC-only)
-│       ├── cdn/            # CloudFront + Route53
-│       └── notifications/  # Lambda Function URL + SES contact form
-├── build/
-│   ├── package.json        # Build dependencies (Tailwind, esbuild)
-│   └── tailwind.config.js
+│       ├── storage/            # S3 bucket (private, OAC-only)
+│       ├── cdn/                # CloudFront + Route53
+│       └── notifications/      # Lambda Function URL + SES contact form
 ├── .github/workflows/
-│   └── deploy.yml          # CI/CD: Terraform → build → S3 sync
+│   └── deploy.yml              # CI/CD: Terraform → build → S3 sync
 └── .gitignore
 ```
+
+> **Note:** This repo provides the infrastructure and CI/CD pipeline only. You must supply your own `src/` and `build/` directories. The deploy workflow expects:
+> - `src/landing.js` to contain the placeholder strings `REPLACE_WITH_LAMBDA_URL` and `REPLACE_WITH_CONTACT_TOKEN` — these are replaced at deploy time with the Terraform outputs.
+> - `build/package.json` to define `build` and `watch:css` npm scripts.
+> - `build/package-lock.json` for npm caching in CI.
 
 ## Local Development
 
